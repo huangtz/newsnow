@@ -10,6 +10,7 @@ const nitroOption: Parameters<typeof viteNitro>[0] = {
   },
   rollupConfig: {
     plugins: [RollopGlob()],
+    external: ["pg-native", "cloudflare:sockets"],
   },
   sourceMap: false,
   database: {
@@ -33,9 +34,19 @@ const nitroOption: Parameters<typeof viteNitro>[0] = {
 }
 
 if (process.env.VERCEL) {
-  nitroOption.preset = "vercel-edge"
+  nitroOption.preset = "vercel"
   // You can use other online database, do it yourself. For more info: https://db0.unjs.io/connectors
-  nitroOption.database = undefined
+  nitroOption.database = {
+    default: {
+      connector: "postgresql",
+      options: {
+        connectionString: process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL,
+        ssl: {
+          rejectUnauthorized: false, // 允许自签名证书
+        },
+      },
+    },
+  }
   // nitroOption.vercel = {
   //   config: {
   //     cache: []

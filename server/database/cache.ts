@@ -11,9 +11,9 @@ export class Cache {
 
   async init() {
     await this.db.prepare(`
-      CREATE TABLE IF NOT EXISTS cache (
+      CREATE TABLE IF NOT EXISTS newsnow.t_cache (
         id TEXT PRIMARY KEY,
-        updated INTEGER,
+        updated BIGINT,
         data TEXT
       );
     `).run()
@@ -22,14 +22,14 @@ export class Cache {
 
   async set(key: string, value: NewsItem[]) {
     const now = Date.now()
-    await this.db.prepare(
-      `INSERT OR REPLACE INTO cache (id, data, updated) VALUES (?, ?, ?)`,
-    ).run(key, JSON.stringify(value), now)
-    logger.success(`set ${key} cache`)
+    await this.db.prepare(`
+        INSERT INTO newsnow.t_cache (id, data, updated) VALUES (?, ?, ?)
+            ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated = EXCLUDED.updated
+    `).run(key, JSON.stringify(value), now)
   }
 
   async get(key: string): Promise<CacheInfo | undefined > {
-    const row = (await this.db.prepare(`SELECT id, data, updated FROM cache WHERE id = ?`).get(key)) as CacheRow | undefined
+    const row = (await this.db.prepare(`SELECT id, data, updated FROM newsnow.t_cache WHERE id = ?`).get(key)) as CacheRow | undefined
     if (row) {
       logger.success(`get ${key} cache`)
       return {
@@ -42,7 +42,7 @@ export class Cache {
 
   async getEntire(keys: string[]): Promise<CacheInfo[]> {
     const keysStr = keys.map(k => `id = '${k}'`).join(" or ")
-    const res = await this.db.prepare(`SELECT id, data, updated FROM cache WHERE ${keysStr}`).all() as any
+    const res = await this.db.prepare(`SELECT id, data, updated FROM newsnow.t_cache WHERE ${keysStr}`).all() as any
     const rows = (res.results ?? res) as CacheRow[]
 
     /**
@@ -67,7 +67,7 @@ export class Cache {
   }
 
   async delete(key: string) {
-    return await this.db.prepare(`DELETE FROM cache WHERE id = ?`).run(key)
+    return await this.db.prepare(`DELETE FROM newsnow.t_cache WHERE id = ?`).run(key)
   }
 }
 
